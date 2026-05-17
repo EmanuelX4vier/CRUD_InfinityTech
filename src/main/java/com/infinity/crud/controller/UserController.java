@@ -1,6 +1,5 @@
 package com.infinity.crud.controller;
 
-import com.infinity.crud.dto.userdto.UserRequestDTO;
 import com.infinity.crud.dto.userdto.UserResponseDTO;
 import com.infinity.crud.dto.userdto.UserUpdateDTO;
 import com.infinity.crud.service.user.UserService;
@@ -16,12 +15,6 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-
-    @PostMapping
-    public ResponseEntity<UserResponseDTO> createUser(@RequestBody @Valid UserRequestDTO dto) {
-        UserResponseDTO created = userService.createUser(dto);
-        return ResponseEntity.status(201).body(created);
-    }
 
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponseDTO> searchUser(@PathVariable Long userId) {
