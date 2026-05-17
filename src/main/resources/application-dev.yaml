@@ -9,6 +9,8 @@ spring:
 
   jwt:
     secret: ${JWT_SECRET}
+    refresh-token-expiration-days: 7
+
   datasource:
 
     url: ${DB_URL}

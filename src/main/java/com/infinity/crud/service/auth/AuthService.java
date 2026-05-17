@@ -1,9 +1,13 @@
 package com.infinity.crud.service.auth;
 
+import com.infinity.crud.dto.authdto.AuthResponseDTO;
 import com.infinity.crud.dto.authdto.LoginRequestDTO;
 import com.infinity.crud.dto.userdto.UserRequestDTO;
+import com.infinity.crud.entity.RefreshToken;
 import com.infinity.crud.entity.User;
 import com.infinity.crud.repository.UserRepository;
+import com.infinity.crud.security.JwtService;
+import com.infinity.crud.service.refresh.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,15 +22,15 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     public void register(UserRequestDTO request) {
 
-        // Verifica se já existe usuário com o mesmo email
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Já existe um usuário cadastrado com este email.");
         }
 
-        // Cria a entidade User com senha criptografada
         User user = User.builder()
                 .nome(request.getNome())
                 .email(request.getEmail())
@@ -34,20 +38,51 @@ public class AuthService {
                 .funcao(request.getFuncao())
                 .build();
 
-        // Salva no banco
         userRepository.save(user);
     }
 
 
-     //Executa o login do usuário.
+    public AuthResponseDTO login(LoginRequestDTO request) {
 
-    public Authentication login(LoginRequestDTO request) {
-
-        return authenticationManager.authenticate(
+        Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.email(),
                         request.senha()
                 )
         );
+
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+
+        String accessToken = jwtService.generateToken(user.getEmail());
+        refreshTokenService.revokeAllByUser(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new AuthResponseDTO(
+                accessToken,
+                refreshToken.getToken()
+        );
+    }
+
+    public AuthResponseDTO refreshToken(String refreshToken) {
+
+        //Valida o refresh token (existência, expiração e revogação)
+        RefreshToken token = refreshTokenService.validateToken(refreshToken);
+
+        User user = token.getUser();
+
+        //Gera novo acesso token
+        String newAccessToken = jwtService.generateToken(user.getEmail());
+
+        refreshTokenService.revokeToken(refreshToken);
+        RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new AuthResponseDTO(newAccessToken, newRefreshToken.getToken());
+    }
+
+    public void logout(String refreshToken) {
+
+        refreshTokenService.revokeToken(refreshToken);
     }
 }

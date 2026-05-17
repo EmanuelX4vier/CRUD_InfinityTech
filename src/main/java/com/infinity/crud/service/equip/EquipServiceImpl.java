@@ -49,8 +49,12 @@ public class EquipServiceImpl implements EquipService {
         Equip equip = equipRepository.findById(serial)
                 .orElseThrow(EquipNotFoundException::new);
 
-        equip.setDescricao(dto.getDescricao());
-        equip.setStatus(dto.getStatus());
+        if(dto.getDescricao() != null){
+            equip.setDescricao(dto.getDescricao());
+        }
+        if(dto.getStatus() != null){
+            equip.setStatus(dto.getStatus());
+        }
 
         Equip updatedEquip = equipRepository.save(equip);
 
